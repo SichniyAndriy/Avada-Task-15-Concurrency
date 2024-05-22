@@ -2,10 +2,10 @@ package avada.course.question_07._04;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -15,19 +15,22 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
-import net.datafaker.Faker;
 
 public class Main {
     public final static Tunnel tunnel = new Tunnel();
 
     private final static int CARS_IN_RACE = 10;
-    private final static Faker FAKER = new Faker(Locale.getDefault());
 
     public static void main(String[] args) throws InterruptedException {
         CyclicBarrier cyclicBarrier = new CyclicBarrier(CARS_IN_RACE + 1);
+        CountDownLatch countDownLatch = new CountDownLatch(1);
         ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(CARS_IN_RACE);
-        List<RacingCar> racingCars = IntStream.range(1, 11).mapToObj(x -> RacingCar.of(x, cyclicBarrier)).toList();
+
+        List<RacingCar> racingCars = IntStream.range(1, 11)
+                .mapToObj(x -> RacingCar.of(x, cyclicBarrier, countDownLatch))
+                .toList();
         List<Future<RacingCar>> futures = new ArrayList<>();
+
         for (RacingCar car: racingCars) {
             ScheduledFuture<RacingCar> future =
                     scheduledExecutorService.schedule(
@@ -47,7 +50,13 @@ public class Main {
         }
 
         cyclicBarrier.reset();
+        Thread.sleep(500);
+        for (int i = 1; i < 4; ++i) {
+            System.out.print(i + " ");
+            Thread.sleep(500);
+        }
         System.out.println("\n---СТАРТ---");
+        countDownLatch.countDown();
 
         try {
             cyclicBarrier.await();
